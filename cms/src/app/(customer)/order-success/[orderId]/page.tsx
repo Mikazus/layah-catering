@@ -1,19 +1,21 @@
+"use client";
+
 import React from "react";
+import { useParams } from "next/navigation";
 import { OrderStepper } from "@/components/shared/OrderStepper";
 import { OrderSuccessCard } from "@/components/customer/OrderSuccessCard";
 
-export default async function OrderSuccessPage({
-  params,
-}: {
-  params: Promise<{ orderId: string }>;
-}) {
-  const { orderId } = await params;
+export default function OrderSuccessPage() {
+  const params = useParams<{ orderId: string }>();
+  const rawOrderId = Array.isArray(params?.orderId)
+    ? params.orderId[0]
+    : params?.orderId || "ORD-0000";
 
   return (
     <div className="flex min-h-[calc(100vh-73px)] flex-col justify-between">
       <div className="px-4">
         <OrderStepper currentStep={3} />
-        <OrderSuccessCard orderId={decodeURIComponent(orderId)} />
+        <OrderSuccessCard orderId={decodeURIComponent(rawOrderId)} />
       </div>
 
       <footer className="border-t border-[#18352B]/15 px-6 sm:px-10 py-4 text-[11px] text-[#18352B]/70">
