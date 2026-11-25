@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import { ManagementSidebar } from "@/components/management/ManagementSidebar";
 import { ManagementTopbar } from "@/components/management/ManagementTopbar";
 import { formatWibShortStamp } from "@/lib/utils/format";
@@ -8,7 +10,14 @@ export default function ManagementLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const year = new Date().getFullYear();
+  const [year, setYear] = useState<number>(2026);
+  const [lastUpdated, setLastUpdated] = useState<string>("—");
+
+  useEffect(() => {
+    const now = new Date();
+    setYear(now.getFullYear());
+    setLastUpdated(formatWibShortStamp(now));
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#C9B99A] text-[#18352B]">
@@ -18,7 +27,7 @@ export default function ManagementLayout({
         <main className="flex-1 px-8 py-7">{children}</main>
         <footer className="mt-auto border-t border-[#18352B]/20 px-8 py-4 text-[11px] text-[#18352B]/70 flex items-center justify-between">
           <span>© {year} Layah Katering. Seluruh hak dilindungi.</span>
-          <span>Terakhir diperbarui: {formatWibShortStamp()}</span>
+          <span>Terakhir diperbarui: {lastUpdated}</span>
         </footer>
       </div>
     </div>

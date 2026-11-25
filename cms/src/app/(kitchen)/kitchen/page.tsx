@@ -19,12 +19,13 @@ function KitchenDisplayContent() {
   const { orders, isLoading, isConnected, error, lastSynced, advanceStatus } =
     useKdsOrders();
 
-  const [now, setNow] = useState<Date>(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
   const [filterMode, setFilterMode] = useState<"all" | "dietary">("all");
   const [routeFilter, setRouteFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
   useEffect(() => {
+    setNow(new Date());
     const timer = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
@@ -101,16 +102,18 @@ function KitchenDisplayContent() {
           </div>
 
           <div className="text-right text-xs">
-            <p className="text-[#18352B]/65">{formatWibLongDate(now)}</p>
+            <p className="text-[#18352B]/65">
+              {now ? formatWibLongDate(now) : "Loading date..."}
+            </p>
             <p className="mt-0.5 inline-flex items-center gap-1.5 font-semibold text-[#18352B]">
               <span
                 className={`h-2 w-2 rounded-full ${
                   isConnected ? "bg-[#18352B]" : "bg-[#641E2A]"
                 }`}
               />
-              {formatWibTime(now)}{" "}
+              {now ? formatWibTime(now) : "--:-- WIB"}{" "}
               <span className="font-normal text-[#18352B]/65">
-                · {getWibServicePeriod(now)}
+                · {now ? getWibServicePeriod(now) : "Kitchen service"}
               </span>
             </p>
           </div>
