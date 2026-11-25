@@ -1,0 +1,11 @@
+﻿.env
+.env.local
+.env.*.local
+cms/node_modules/
+cms/.next/
+cms/out/
+backend/bin/
+*.exe
+*.out
+.DS_Store
+Thumbs.db

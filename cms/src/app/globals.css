@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+:root {
+  /* Layah Brand Palette */
+  --layah-burgundy: #641E2A;
+  --layah-burgundy-hover: #4E1620;
+  --layah-burgundy-soft: #F3E4E6;
+  --layah-tan: #C9B99A;
+  --layah-tan-light: #DDD2BC;
+  --layah-tan-card: #D8CBB3;
+  --layah-tan-surface: #EFE9DC;
+  --layah-tan-border: #A9997C;
+  --layah-green: #18352B;
+  --layah-green-hover: #11261F;
+  --layah-green-muted: #3A544A;
+  --layah-cream: #FBF9F4;
+  --layah-ink: #18352B;
+  --layah-ink-muted: #52615B;
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--layah-tan);
+    color: var(--layah-ink);
+    font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-serif {
+    font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  }
+}
+
+/* Subtle custom scrollbars matching Saddle Tan & Racing Green */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #C1B090;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #18352B55;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #18352B99;
+}
+
+/* Dedicated 70mm x 90mm Thermal QR Label Print Rules */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #layah-qr-printable,
+  #layah-qr-printable * {
+    visibility: visible !important;
+  }
+
+  #layah-qr-printable {
+    position: fixed !important;
+    inset: 0 !important;
+    margin: auto !important;
+    width: 70mm !important;
+    height: 90mm !important;
+    box-shadow: none !important;
+    border: 1px solid #18352B !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
