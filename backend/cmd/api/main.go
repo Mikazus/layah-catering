@@ -9,12 +9,12 @@ import (
 	"syscall"
 	"time"
 
-	"layah-catering-backend/internal/config"
-	"layah-catering-backend/internal/db"
-	"layah-catering-backend/internal/handlers"
-	"layah-catering-backend/internal/middleware"
-	"layah-catering-backend/internal/models"
-	"layah-catering-backend/internal/repository"
+	"layah-catering-backend/pkg/config"
+	"layah-catering-backend/pkg/db"
+	"layah-catering-backend/pkg/handlers"
+	"layah-catering-backend/pkg/middleware"
+	"layah-catering-backend/pkg/models"
+	"layah-catering-backend/pkg/repository"
 )
 
 func main() {

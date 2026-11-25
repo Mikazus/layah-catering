@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"layah-catering-backend/internal/repository"
+	"layah-catering-backend/pkg/repository"
 )
 
 type ManagementHandler struct {

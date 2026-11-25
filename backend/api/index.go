@@ -8,9 +8,9 @@ import (
 	"os"
 	"sync"
 
-	"layah-catering-backend/internal/config"
-	"layah-catering-backend/internal/db"
-	"layah-catering-backend/internal/router"
+	"layah-catering-backend/pkg/config"
+	"layah-catering-backend/pkg/db"
+	"layah-catering-backend/pkg/router"
 )
 
 var (

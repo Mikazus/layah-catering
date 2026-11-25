@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"layah-catering-backend/internal/middleware"
-	"layah-catering-backend/internal/models"
-	"layah-catering-backend/internal/repository"
+	"layah-catering-backend/pkg/middleware"
+	"layah-catering-backend/pkg/models"
+	"layah-catering-backend/pkg/repository"
 )
 
 var validOrderStatuses = map[string]bool{

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"layah-catering-backend/internal/models"
-	"layah-catering-backend/internal/repository"
+	"layah-catering-backend/pkg/models"
+	"layah-catering-backend/pkg/repository"
 )
 
 type MenuHandler struct {

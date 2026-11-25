@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"layah-catering-backend/internal/models"
+	"layah-catering-backend/pkg/models"
 )
 
 type MenuRepository struct {

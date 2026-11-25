@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"layah-catering-backend/internal/models"
+	"layah-catering-backend/pkg/models"
 )
 
 type contextKey string

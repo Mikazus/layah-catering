@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"layah-catering-backend/internal/middleware"
-	"layah-catering-backend/internal/models"
-	"layah-catering-backend/internal/repository"
+	"layah-catering-backend/pkg/middleware"
+	"layah-catering-backend/pkg/models"
+	"layah-catering-backend/pkg/repository"
 )
 
 type DriverHandler struct {
