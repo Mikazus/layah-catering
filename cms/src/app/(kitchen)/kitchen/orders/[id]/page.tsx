@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -20,13 +20,16 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   cancelled: "Cancelled",
 };
 
-export default function KitchenOrderDetailPage() {
+function KitchenOrderDetailContent() {
   const params = useParams<{ id: string }>();
-  const orderId = decodeURIComponent(params.id);
+  const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id || "";
+  const orderId = decodeURIComponent(rawId);
+
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orderId) return;
     getOrderByIdApi(orderId)
       .then(setOrder)
       .finally(() => setLoading(false));
@@ -41,7 +44,6 @@ export default function KitchenOrderDetailPage() {
   return (
     <>
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-8 py-7">
-        {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-[#18352B]/65">
           <Link
             href="/kitchen"
@@ -56,7 +58,6 @@ export default function KitchenOrderDetailPage() {
           </span>
         </div>
 
-        {/* Title Row */}
         <div className="mt-3 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3">
@@ -91,7 +92,6 @@ export default function KitchenOrderDetailPage() {
           </Link>
         </div>
 
-        {/* Content Grid */}
         {loading ? (
           <div className="mt-8 rounded-xl bg-[#FBF9F4] p-12 text-center text-sm text-[#18352B]/70">
             Loading order details...
@@ -117,5 +117,19 @@ export default function KitchenOrderDetailPage() {
 
       <KitchenFooter />
     </>
+  );
+}
+
+export default function KitchenOrderDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 text-sm text-[#18352B]/70">
+          Loading order details...
+        </div>
+      }
+    >
+      <KitchenOrderDetailContent />
+    </Suspense>
   );
 }
