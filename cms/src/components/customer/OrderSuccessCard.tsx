@@ -2,14 +2,15 @@
 
 import React from "react";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, MapPin } from "lucide-react";
 
 interface OrderSuccessCardProps {
   orderId: string;
 }
 
 export function OrderSuccessCard({ orderId }: OrderSuccessCardProps) {
-  const formattedId = orderId.startsWith("#") ? orderId : `#${orderId}`;
+  const cleanId = orderId.replace(/^#/, "");
+  const formattedId = `#${cleanId}`;
 
   return (
     <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-14 sm:py-20 text-center">
@@ -32,12 +33,22 @@ export function OrderSuccessCard({ orderId }: OrderSuccessCardProps) {
 
       <div className="my-7 h-px w-12 bg-[#18352B]/35" />
 
-      <Link
-        href="/catalog"
-        className="inline-flex items-center justify-center rounded-sm border border-[#18352B]/70 px-10 py-3 text-sm font-medium text-[#18352B] hover:bg-[#18352B] hover:text-[#FBF9F4] transition-colors"
-      >
-        Kembali ke Katalog
-      </Link>
+      <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+        <Link
+          href={`/orders?orderId=${encodeURIComponent(cleanId)}`}
+          className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-md bg-[#641E2A] px-7 py-3 text-sm font-semibold text-[#FBF9F4] hover:bg-[#4E1620] transition-colors"
+        >
+          <MapPin className="h-4 w-4" />
+          Lacak Pesanan &amp; QR Resi
+        </Link>
+
+        <Link
+          href="/catalog"
+          className="inline-flex w-full sm:w-auto items-center justify-center rounded-md border border-[#18352B]/70 px-7 py-3 text-sm font-medium text-[#18352B] hover:bg-[#18352B] hover:text-[#FBF9F4] transition-colors"
+        >
+          Kembali ke Katalog
+        </Link>
+      </div>
     </div>
   );
 }

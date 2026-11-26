@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { AlertTriangle, Printer, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { Order, OrderStatus } from "@/types/order";
@@ -8,67 +9,6 @@ import type { Order, OrderStatus } from "@/types/order";
 interface QrLabelPanelProps {
   order: Order;
   onStatusChange?: (nextStatus: OrderStatus) => Promise<void>;
-}
-
-function DeterministicQrSvg({ seed }: { seed: string }) {
-  const size = 21;
-  let hash = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    hash ^= seed.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  const isFinder = (r: number, c: number) => {
-    const inTopLeft = r < 7 && c < 7;
-    const inTopRight = r < 7 && c >= size - 7;
-    const inBottomLeft = r >= size - 7 && c < 7;
-    return inTopLeft || inTopRight || inBottomLeft;
-  };
-
-  const finderFilled = (r: number, c: number) => {
-    const lr = r >= size - 7 ? r - (size - 7) : r;
-    const lc = c >= size - 7 ? c - (size - 7) : c;
-    if (lr === 0 || lr === 6 || lc === 0 || lc === 6) return true;
-    if (lr >= 2 && lr <= 4 && lc >= 2 && lc <= 4) return true;
-    return false;
-  };
-
-  const cells: React.ReactNode[] = [];
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      let filled = false;
-      if (isFinder(r, c)) {
-        filled = finderFilled(r, c);
-      } else {
-        const bit = ((hash >>> ((r * 5 + c * 3) % 24)) ^ (r * 31 + c * 17)) & 1;
-        filled = bit === 1;
-      }
-      if (filled) {
-        cells.push(
-          <rect
-            key={`${r}-${c}`}
-            x={c * 8}
-            y={r * 8}
-            width={8}
-            height={8}
-            fill="#18352B"
-          />
-        );
-      }
-    }
-  }
-
-  return (
-    <svg
-      viewBox={`0 0 ${size * 8} ${size * 8}`}
-      className="mx-auto h-40 w-40"
-      role="img"
-      aria-label={`QR Code untuk ${seed}`}
-    >
-      <rect width={size * 8} height={size * 8} fill="#FFFFFF" />
-      {cells}
-    </svg>
-  );
 }
 
 export function QrLabelPanel({ order, onStatusChange }: QrLabelPanelProps) {
@@ -95,7 +35,7 @@ export function QrLabelPanel({ order, onStatusChange }: QrLabelPanelProps) {
         A clear label. A seamless handover.
       </p>
 
-      {/* Thermal QR Label Preview (70 x 90 mm) */}
+      {/* Thermal QR Label Preview (70 x 90 mm) — Real Scannable QR encoding order.id */}
       <div className="mt-5 rounded-xl bg-[#EFE9DC] p-5 border border-[#18352B]/10">
         <div
           id="layah-qr-printable"
@@ -110,7 +50,15 @@ export function QrLabelPanel({ order, onStatusChange }: QrLabelPanelProps) {
             {order.customerName}
           </p>
 
-          <DeterministicQrSvg seed={`${order.orderCode}-${order.receiptCode}`} />
+          <div className="inline-block p-1 bg-white">
+            <QRCodeSVG
+              value={order.id}
+              size={156}
+              level="M"
+              fgColor="#18352B"
+              bgColor="#FFFFFF"
+            />
+          </div>
 
           <p className="mt-3 text-[10px] text-[#18352B]/65">
             {order.deliveryRoute} · {order.scheduledTime} WIB
@@ -128,11 +76,10 @@ export function QrLabelPanel({ order, onStatusChange }: QrLabelPanelProps) {
         </div>
 
         <p className="mt-3 text-center text-[10px] text-[#18352B]/55">
-          QR label preview · 70 × 90 mm
+          QR label preview · 70 × 90 mm (Scannable by Driver)
         </p>
       </div>
 
-      {/* Print Button */}
       <div className="mt-5 space-y-2.5">
         <Button variant="burgundy" size="lg" fullWidth onClick={handlePrint}>
           <Printer className="h-4 w-4" />

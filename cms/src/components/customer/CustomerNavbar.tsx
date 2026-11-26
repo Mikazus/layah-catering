@@ -3,7 +3,14 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, LogOut, Search, ShoppingBag, User } from "lucide-react";
+import {
+  ChevronDown,
+  LogOut,
+  MapPin,
+  Search,
+  ShoppingBag,
+  User,
+} from "lucide-react";
 import { LayahLogo } from "@/components/shared/LayahLogo";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
@@ -33,17 +40,43 @@ export function CustomerNavbar() {
     }
   };
 
-  const displayName = user?.fullName?.split(" ")[0] || "Aditya";
+  const displayName = user?.fullName?.split(" ")[0] || "Customer";
 
   return (
     <header className="sticky top-0 z-30 w-full bg-[#18352B] text-[#C9B99A] border-b border-[#C9B99A]/15">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 sm:px-8 py-3.5">
-        <Link href="/catalog" className="shrink-0">
-          <LayahLogo variant="navbar" subtitle="CATERING · MALANG" tone="light" />
-        </Link>
+        <div className="flex items-center gap-6 sm:gap-8">
+          <Link href="/catalog" className="shrink-0">
+            <LayahLogo variant="navbar" subtitle="CATERING · MALANG" tone="light" />
+          </Link>
 
-        {/* Search bar - full width row on narrow mobile, inline on desktop */}
-        <div className="order-3 w-full md:order-2 md:w-auto md:flex-1 md:max-w-sm md:ml-auto md:mr-4">
+          <nav className="hidden md:flex items-center gap-6 text-sm">
+            <Link
+              href="/catalog"
+              className={`py-1 border-b-2 transition-colors ${
+                pathname === "/catalog"
+                  ? "border-[#C9B99A] font-semibold text-[#FBF9F4]"
+                  : "border-transparent text-[#C9B99A]/75 hover:text-[#FBF9F4]"
+              }`}
+            >
+              Menu Katalog
+            </Link>
+            <Link
+              href="/orders"
+              className={`inline-flex items-center gap-1.5 py-1 border-b-2 transition-colors ${
+                pathname.startsWith("/orders")
+                  ? "border-[#C9B99A] font-semibold text-[#FBF9F4]"
+                  : "border-transparent text-[#C9B99A]/75 hover:text-[#FBF9F4]"
+              }`}
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              Lacak Pesanan
+            </Link>
+          </nav>
+        </div>
+
+        {/* Search bar */}
+        <div className="order-3 w-full md:order-2 md:w-auto md:flex-1 md:max-w-xs md:ml-auto md:mr-3">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#C9B99A]/60" />
             <input
@@ -57,7 +90,19 @@ export function CustomerNavbar() {
         </div>
 
         {/* Right controls */}
-        <div className="order-2 md:order-3 flex items-center gap-3 sm:gap-4">
+        <div className="order-2 md:order-3 flex items-center gap-2.5 sm:gap-4">
+          <Link
+            href="/orders"
+            className={`inline-flex md:hidden items-center gap-1 rounded-md border px-2.5 py-2 text-[11px] font-semibold ${
+              pathname.startsWith("/orders")
+                ? "border-[#C9B99A] bg-[#C9B99A] text-[#18352B]"
+                : "border-[#C9B99A]/35 text-[#C9B99A]"
+            }`}
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            Lacak
+          </Link>
+
           <Link
             href="/catalog"
             className="relative flex lg:hidden items-center justify-center rounded-md border border-[#C9B99A]/30 p-2 text-[#C9B99A]"
@@ -95,7 +140,7 @@ export function CustomerNavbar() {
                 <div className="absolute right-0 z-20 mt-2 w-48 rounded-lg border border-[#18352B]/20 bg-[#EFE9DC] py-1.5 text-[#18352B] shadow-xl">
                   <div className="border-b border-[#18352B]/15 px-3.5 py-2">
                     <p className="text-xs font-semibold truncate">
-                      {user?.fullName || "Aditya Pratama"}
+                      {user?.fullName || "Customer"}
                     </p>
                     <p className="text-[11px] text-[#18352B]/65">Customer</p>
                   </div>
@@ -105,6 +150,13 @@ export function CustomerNavbar() {
                     className="block px-3.5 py-2 text-xs hover:bg-[#18352B]/10"
                   >
                     Menu Katalog
+                  </Link>
+                  <Link
+                    href="/orders"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3.5 py-2 text-xs font-semibold text-[#18352B] hover:bg-[#18352B]/10"
+                  >
+                    Lacak Pesanan &amp; QR Resi
                   </Link>
                   <Link
                     href="/checkout"

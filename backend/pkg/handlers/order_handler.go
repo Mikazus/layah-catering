@@ -28,7 +28,17 @@ func NewOrderHandler(repo *repository.OrderRepository) *OrderHandler {
 }
 
 func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
-	orders, err := h.repo.List(r.Context())
+	var (
+		orders []models.Order
+		err    error
+	)
+
+	if claims, ok := middleware.GetClaims(r.Context()); ok && claims.Role == models.RoleCustomer {
+		orders, err = h.repo.ListForCustomer(r.Context(), claims.UserID)
+	} else {
+		orders, err = h.repo.List(r.Context())
+	}
+
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to fetch orders")
 		return

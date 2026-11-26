@@ -27,46 +27,78 @@ func wibZone() *time.Location {
 	return time.FixedZone("WIB", 7*3600)
 }
 
+const orderSelectColumns = `
+	id, order_code, receipt_code, customer_name, customer_phone,
+	delivery_address, delivery_route, scheduled_time, scheduled_label,
+	service_type, status, total_amount,
+	COALESCE(allergy_alert, ''), COALESCE(allergy_instruction, ''),
+	created_at, dispatched_at, delivered_at,
+	COALESCE(driver_name, ''), driver_lat, driver_lng, driver_location_updated_at
+`
+
+func scanOrderRow(scanner interface{ Scan(dest ...any) error }) (models.Order, error) {
+	var o models.Order
+	var dispatchedAt, deliveredAt, driverUpdatedAt *time.Time
+	err := scanner.Scan(
+		&o.ID, &o.OrderCode, &o.ReceiptCode, &o.CustomerName, &o.CustomerPhone,
+		&o.DeliveryAddress, &o.DeliveryRoute, &o.ScheduledTime, &o.ScheduledLabel,
+		&o.ServiceType, &o.Status, &o.TotalAmount,
+		&o.AllergyAlert, &o.AllergyInstruction,
+		&o.CreatedAt, &dispatchedAt, &deliveredAt,
+		&o.DriverName, &o.DriverLat, &o.DriverLng, &driverUpdatedAt,
+	)
+	if err != nil {
+		return o, err
+	}
+	o.ElapsedMinutes = computeElapsedMinutes(o.CreatedAt)
+	if dispatchedAt != nil {
+		o.DispatchedAt = formatWibLabel(*dispatchedAt)
+	}
+	if deliveredAt != nil {
+		o.DeliveredAt = formatWibLabel(*deliveredAt)
+	}
+	if driverUpdatedAt != nil {
+		o.DriverLocationUpdatedAt = formatWibLabel(*driverUpdatedAt)
+	}
+	o.Items = []models.OrderItem{}
+	return o, nil
+}
+
 func (r *OrderRepository) List(ctx context.Context) ([]models.Order, error) {
-	const query = `
-		SELECT
-			id, order_code, receipt_code, customer_name, customer_phone,
-			delivery_address, delivery_route, scheduled_time, scheduled_label,
-			service_type, status, total_amount,
-			COALESCE(allergy_alert, ''), COALESCE(allergy_instruction, ''),
-			created_at, dispatched_at, delivered_at
-		FROM orders
-		ORDER BY created_at DESC
-	`
+	query := fmt.Sprintf(`SELECT %s FROM orders ORDER BY created_at DESC`, orderSelectColumns)
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+	return r.hydrateOrders(ctx, rows)
+}
 
+func (r *OrderRepository) ListForCustomer(ctx context.Context, userID string) ([]models.Order, error) {
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM orders
+		WHERE user_id = $1::uuid
+		   OR LOWER(TRIM(customer_name)) = LOWER(TRIM(COALESCE((SELECT full_name FROM users WHERE id = $1::uuid), '')))
+		ORDER BY created_at DESC
+	`, orderSelectColumns)
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return r.hydrateOrders(ctx, rows)
+}
+
+func (r *OrderRepository) hydrateOrders(ctx context.Context, rows pgx.Rows) ([]models.Order, error) {
 	orders := make([]models.Order, 0)
 	orderIDs := make([]string, 0)
 
 	for rows.Next() {
-		var o models.Order
-		var dispatchedAt, deliveredAt *time.Time
-		if err := rows.Scan(
-			&o.ID, &o.OrderCode, &o.ReceiptCode, &o.CustomerName, &o.CustomerPhone,
-			&o.DeliveryAddress, &o.DeliveryRoute, &o.ScheduledTime, &o.ScheduledLabel,
-			&o.ServiceType, &o.Status, &o.TotalAmount,
-			&o.AllergyAlert, &o.AllergyInstruction,
-			&o.CreatedAt, &dispatchedAt, &deliveredAt,
-		); err != nil {
+		o, err := scanOrderRow(rows)
+		if err != nil {
 			return nil, err
 		}
-		o.ElapsedMinutes = computeElapsedMinutes(o.CreatedAt)
-		if dispatchedAt != nil {
-			o.DispatchedAt = formatWibLabel(*dispatchedAt)
-		}
-		if deliveredAt != nil {
-			o.DeliveredAt = formatWibLabel(*deliveredAt)
-		}
-		o.Items = []models.OrderItem{}
 		orders = append(orders, o)
 		orderIDs = append(orderIDs, o.ID)
 	}
@@ -94,39 +126,19 @@ func (r *OrderRepository) List(ctx context.Context) ([]models.Order, error) {
 func (r *OrderRepository) GetByID(ctx context.Context, rawID string) (*models.Order, error) {
 	cleanID := strings.TrimPrefix(strings.TrimSpace(rawID), "#")
 
-	const query = `
-		SELECT
-			id, order_code, receipt_code, customer_name, customer_phone,
-			delivery_address, delivery_route, scheduled_time, scheduled_label,
-			service_type, status, total_amount,
-			COALESCE(allergy_alert, ''), COALESCE(allergy_instruction, ''),
-			created_at, dispatched_at, delivered_at
+	query := fmt.Sprintf(`
+		SELECT %s
 		FROM orders
 		WHERE LOWER(id) = LOWER($1) OR LOWER(order_code) = LOWER($2)
 		LIMIT 1
-	`
-	var o models.Order
-	var dispatchedAt, deliveredAt *time.Time
-	err := r.pool.QueryRow(ctx, query, cleanID, "#"+cleanID).Scan(
-		&o.ID, &o.OrderCode, &o.ReceiptCode, &o.CustomerName, &o.CustomerPhone,
-		&o.DeliveryAddress, &o.DeliveryRoute, &o.ScheduledTime, &o.ScheduledLabel,
-		&o.ServiceType, &o.Status, &o.TotalAmount,
-		&o.AllergyAlert, &o.AllergyInstruction,
-		&o.CreatedAt, &dispatchedAt, &deliveredAt,
-	)
+	`, orderSelectColumns)
+
+	o, err := scanOrderRow(r.pool.QueryRow(ctx, query, cleanID, "#"+cleanID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
-	}
-
-	o.ElapsedMinutes = computeElapsedMinutes(o.CreatedAt)
-	if dispatchedAt != nil {
-		o.DispatchedAt = formatWibLabel(*dispatchedAt)
-	}
-	if deliveredAt != nil {
-		o.DeliveredAt = formatWibLabel(*deliveredAt)
 	}
 
 	itemsMap, err := r.fetchItemsByOrderIDs(ctx, []string{o.ID})
@@ -231,7 +243,6 @@ func (r *OrderRepository) Create(ctx context.Context, userID string, req models.
 		})
 	}
 
-	// Sync real transaction totals into memberships table
 	if userID != "" {
 		var userEmail string
 		if err := tx.QueryRow(ctx, `SELECT email FROM users WHERE id = $1::uuid`, userID).Scan(&userEmail); err == nil && userEmail != "" {
@@ -287,7 +298,7 @@ func (r *OrderRepository) UpdateStatus(ctx context.Context, rawID string, status
 		UPDATE orders
 		SET
 			status        = $2,
-			dispatched_at = CASE WHEN $2 = 'dispatched' THEN NOW() ELSE dispatched_at END,
+			dispatched_at = CASE WHEN $2 = 'dispatched' AND dispatched_at IS NULL THEN NOW() ELSE dispatched_at END,
 			delivered_at  = CASE WHEN $2 = 'delivered'  THEN NOW() ELSE delivered_at  END
 		WHERE LOWER(id) = LOWER($1) OR LOWER(order_code) = LOWER($3)
 	`
@@ -363,8 +374,7 @@ func deriveServiceType(hour int) string {
 }
 
 func computeElapsedMinutes(createdAt time.Time) int {
-	mins := int(math.Max(0, math.Floor(time.Since(createdAt).Minutes())))
-	return mins
+	return int(math.Max(0, math.Floor(time.Since(createdAt).Minutes())))
 }
 
 func formatWibLabel(t time.Time) string {

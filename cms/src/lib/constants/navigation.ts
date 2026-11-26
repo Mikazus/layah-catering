@@ -15,7 +15,7 @@ export const ROLE_HOME_ROUTES: Record<UserRole, string> = {
 };
 
 export const ROLE_ALLOWED_PREFIXES: Record<UserRole, string[]> = {
-  customer: ["/catalog", "/checkout", "/order-success"],
+  customer: ["/catalog", "/checkout", "/order-success", "/orders"],
   kitchen: ["/kitchen"],
   driver: ["/driver"],
   management: ["/management"],

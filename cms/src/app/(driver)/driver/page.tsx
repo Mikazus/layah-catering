@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ClipboardList, Map as MapIcon, QrCode } from "lucide-react";
 import { getOrdersApi } from "@/lib/api/orders";
+import { updateDriverLocationApi } from "@/lib/api/driver";
 import { useQrScanner } from "@/hooks/useQrScanner";
 import {
   geocodeOrderAddress,
@@ -29,6 +30,7 @@ export default function DriverPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [routeMode, setRouteMode] = useState<"single" | "multi">("single");
   const [gpsOrigin, setGpsOrigin] = useState<LatLng | null>(null);
+  const [isSharingLocation, setIsSharingLocation] = useState(false);
 
   const {
     kitchenQr,
@@ -51,14 +53,12 @@ export default function DriverPage() {
       const data = await getOrdersApi();
       setOrders(data);
 
-      // Immediately seed deterministic coordinates so list & map render instantaneously
       const initialCoords: Record<string, LatLng> = {};
       for (const o of data) {
         initialCoords[o.id] = resolveFallbackCoords(o);
       }
       setOrderCoords((prev) => ({ ...initialCoords, ...prev }));
 
-      // Refine pending orders asynchronously with real Nominatim OSM coordinates
       const pending = data.filter(
         (o) => o.status === "ready" || o.status === "dispatched"
       );
@@ -103,6 +103,53 @@ export default function DriverPage() {
     return MALANG_DEPOT;
   }, [gpsOrigin]);
 
+  // Continuously watch GPS & push live driver position to Neon DB when sharing is active
+  useEffect(() => {
+    if (!isSharingLocation) return;
+
+    const targetOrder =
+      selectedOrder ??
+      orders.find((o) => o.status === "dispatched" || o.status === "ready");
+    if (!targetOrder) return;
+
+    let watchId: number | undefined;
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const coords = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          };
+          setGpsOrigin(coords);
+          if (isWithinMalangRaya(coords)) {
+            updateDriverLocationApi({
+              orderId: targetOrder.id,
+              lat: coords.lat,
+              lng: coords.lng,
+            }).catch(() => {});
+          }
+        },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 5000 }
+      );
+    }
+
+    const heartbeat = setInterval(() => {
+      updateDriverLocationApi({
+        orderId: targetOrder.id,
+        lat: effectiveOrigin.lat,
+        lng: effectiveOrigin.lng,
+      }).catch(() => {});
+    }, 10000);
+
+    return () => {
+      if (watchId !== undefined && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      clearInterval(heartbeat);
+    };
+  }, [isSharingLocation, selectedOrder, orders, effectiveOrigin]);
+
   const pendingCount = useMemo(
     () =>
       orders.filter((o) => o.status === "ready" || o.status === "dispatched")
@@ -132,6 +179,7 @@ export default function DriverPage() {
 
   const handleConfirmDelivered = async () => {
     await confirmDelivered();
+    setIsSharingLocation(false);
     await loadOrders();
   };
 
@@ -144,7 +192,6 @@ export default function DriverPage() {
         isRefreshing={isLoadingOrders}
       />
 
-      {/* Top Segmented Mobile Navigation */}
       <nav className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-[#18352B]/12 p-1 border border-[#18352B]/15">
         <button
           type="button"
@@ -158,13 +205,7 @@ export default function DriverPage() {
           <ClipboardList className="h-3.5 w-3.5" />
           Antrean
           {pendingCount > 0 && (
-            <span
-              className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                activeTab === "queue"
-                  ? "bg-[#641E2A] text-[#FBF9F4]"
-                  : "bg-[#641E2A] text-[#FBF9F4]"
-              }`}
-            >
+            <span className="rounded-full bg-[#641E2A] px-1.5 py-0.2 text-[10px] font-bold text-[#FBF9F4]">
               {pendingCount}
             </span>
           )}
@@ -197,7 +238,6 @@ export default function DriverPage() {
         </button>
       </nav>
 
-      {/* Active Tab Content */}
       {activeTab === "queue" && (
         <DriverOrderList
           orders={orders}
@@ -218,10 +258,13 @@ export default function DriverPage() {
           orderCoords={orderCoords}
           driverOrigin={effectiveOrigin}
           usingGps={Boolean(gpsOrigin)}
+          isSharingLocation={isSharingLocation}
+          onToggleShareLocation={setIsSharingLocation}
           onRequestGps={requestGps}
           onSelectOrder={setSelectedOrder}
           onToggleMode={setRouteMode}
           onOpenVerify={handleOpenVerify}
+          onOrderDispatched={loadOrders}
         />
       )}
 

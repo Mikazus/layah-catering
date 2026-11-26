@@ -51,14 +51,15 @@ func New(pool *pgxpool.Pool, cfg *config.Config) http.Handler {
 	mux.Handle("PUT /api/v1/menus/{id}", protect(menuH.Update, models.RoleManagement))
 	mux.Handle("DELETE /api/v1/menus/{id}", protect(menuH.Delete, models.RoleManagement))
 
-	// Orders (includes Driver for delivery queue)
+	// Orders (Customer tracking, Kitchen KDS, Driver delivery queue, Management)
 	mux.Handle("GET /api/v1/orders", protect(orderH.List, models.RoleKitchen, models.RoleManagement, models.RoleCustomer, models.RoleDriver))
 	mux.Handle("GET /api/v1/orders/{id}", protect(orderH.GetByID, models.RoleKitchen, models.RoleManagement, models.RoleCustomer, models.RoleDriver))
 	mux.Handle("POST /api/v1/orders", protect(orderH.Create, models.RoleCustomer, models.RoleManagement))
 	mux.Handle("PATCH /api/v1/orders/{id}/status", protect(orderH.UpdateStatus, models.RoleKitchen, models.RoleManagement))
 
-	// Driver QR verification & delivery confirmation
+	// Driver QR verification, live location broadcast, & delivery confirmation
 	mux.Handle("POST /api/v1/driver/verify-qr", protect(driverH.VerifyQR, models.RoleDriver, models.RoleManagement))
+	mux.Handle("POST /api/v1/driver/location", protect(driverH.UpdateLocation, models.RoleDriver, models.RoleManagement))
 	mux.Handle("PATCH /api/v1/driver/orders/{id}/deliver", protect(driverH.MarkDelivered, models.RoleDriver, models.RoleManagement))
 
 	// Management analytics & memberships

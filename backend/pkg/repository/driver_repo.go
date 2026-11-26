@@ -63,7 +63,6 @@ func (r *DriverRepository) VerifyDualQR(
 		loggedOrderID = &idCopy
 	}
 
-	// Audit log every scan attempt into Neon DB
 	var nullableDriver *string
 	if driverID != "" {
 		nullableDriver = &driverID
@@ -76,4 +75,48 @@ func (r *DriverRepository) VerifyDualQR(
 	)
 
 	return &resp, nil
+}
+
+func (r *DriverRepository) UpdateDriverLocation(
+	ctx context.Context,
+	driverID string,
+	req models.UpdateDriverLocationRequest,
+) error {
+	cleanOrderID := strings.TrimPrefix(strings.TrimSpace(req.OrderID), "#")
+
+	var nullableDriver *string
+	if driverID != "" {
+		nullableDriver = &driverID
+	}
+
+	const query = `
+		UPDATE orders
+		SET
+			driver_id                  = COALESCE($2::uuid, driver_id),
+			driver_name                = COALESCE((SELECT full_name FROM users WHERE id = $2::uuid), NULLIF(driver_name, ''), 'Kurir Layah'),
+			driver_lat                 = $3,
+			driver_lng                 = $4,
+			driver_location_updated_at = NOW(),
+			status                     = CASE WHEN $5 = TRUE AND status = 'ready' THEN 'dispatched' ELSE status END,
+			dispatched_at              = CASE WHEN $5 = TRUE AND status = 'ready' AND dispatched_at IS NULL THEN NOW() ELSE dispatched_at END
+		WHERE LOWER(id) = LOWER($1) OR LOWER(order_code) = LOWER($6)
+	`
+
+	tag, err := r.pool.Exec(
+		ctx,
+		query,
+		cleanOrderID,
+		nullableDriver,
+		req.Lat,
+		req.Lng,
+		req.SetDispatched,
+		"#"+cleanOrderID,
+	)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

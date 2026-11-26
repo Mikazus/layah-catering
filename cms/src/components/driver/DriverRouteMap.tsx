@@ -9,10 +9,12 @@ import {
   MapPin,
   Navigation,
   QrCode,
+  Radio,
   Route,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { updateDriverLocationApi } from "@/lib/api/driver";
 import {
   fetchShortestPath,
   type ComputedRoute,
@@ -27,10 +29,13 @@ interface DriverRouteMapProps {
   orderCoords: Record<string, LatLng>;
   driverOrigin: LatLng;
   usingGps: boolean;
+  isSharingLocation: boolean;
+  onToggleShareLocation: (active: boolean) => void;
   onRequestGps: () => void;
   onSelectOrder: (order: Order) => void;
   onToggleMode: (mode: "single" | "multi") => void;
   onOpenVerify: (order: Order) => void;
+  onOrderDispatched: () => void;
 }
 
 export function DriverRouteMap({
@@ -40,10 +45,13 @@ export function DriverRouteMap({
   orderCoords,
   driverOrigin,
   usingGps,
+  isSharingLocation,
+  onToggleShareLocation,
   onRequestGps,
   onSelectOrder,
   onToggleMode,
   onOpenVerify,
+  onOrderDispatched,
 }: DriverRouteMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<import("leaflet").Map | null>(null);
@@ -52,6 +60,7 @@ export function DriverRouteMap({
   const [route, setRoute] = useState<ComputedRoute | null>(null);
   const [calculating, setCalculating] = useState(false);
   const [showSteps, setShowSteps] = useState(false);
+  const [broadcastFeedback, setBroadcastFeedback] = useState<string | null>(null);
 
   const pendingOrders = useMemo(
     () => orders.filter((o) => o.status === "ready" || o.status === "dispatched"),
@@ -107,7 +116,6 @@ export function DriverRouteMap({
         attributionControl: true,
       }).setView([driverOrigin.lat, driverOrigin.lng], 13);
 
-      // 100% Gratis & Tanpa API Key: OpenStreetMap Standard Tiles
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: "&copy; OpenStreetMap",
@@ -228,7 +236,6 @@ export function DriverRouteMap({
 
   const primaryStop = orderedStops[0] ?? selectedOrder;
 
-  // Format direct URL Google Maps (tanpa perlu API key)
   const googleMapsUrl = useMemo(() => {
     if (orderedStops.length === 0) return "#";
     const segments = [
@@ -240,6 +247,33 @@ export function DriverRouteMap({
     ];
     return `https://www.google.com/maps/dir/${segments.join("/")}`;
   }, [orderedStops, driverOrigin, orderCoords]);
+
+  const handleToggleBroadcast = async () => {
+    if (isSharingLocation) {
+      onToggleShareLocation(false);
+      setBroadcastFeedback("Berbagi lokasi dihentikan.");
+      return;
+    }
+
+    if (!primaryStop) return;
+    try {
+      await updateDriverLocationApi({
+        orderId: primaryStop.id,
+        lat: driverOrigin.lat,
+        lng: driverOrigin.lng,
+        setDispatched: true,
+      });
+      onToggleShareLocation(true);
+      setBroadcastFeedback(
+        `Lokasi live dikirim ke pelanggan ${primaryStop.customerName} (${primaryStop.orderCode}).`
+      );
+      onOrderDispatched();
+    } catch (err) {
+      setBroadcastFeedback(
+        err instanceof Error ? err.message : "Gagal membagikan lokasi."
+      );
+    }
+  };
 
   return (
     <div className="flex flex-1 flex-col space-y-3.5 pb-24">
@@ -285,8 +319,39 @@ export function DriverRouteMap({
         </button>
       </div>
 
-      {/* Peta Interaktif OpenStreetMap (Gratis, Tanpa API Key) */}
-      <div className="relative h-72 w-full overflow-hidden rounded-xl border-2 border-[#18352B]/30 bg-[#DDD2BC] shadow-md">
+      {/* Live Location Broadcast Toggle */}
+      {primaryStop && (
+        <button
+          type="button"
+          onClick={handleToggleBroadcast}
+          className={`flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-xs font-semibold transition-colors cursor-pointer shadow-xs ${
+            isSharingLocation
+              ? "bg-[#18352B] text-[#FBF9F4] ring-2 ring-[#641E2A]"
+              : "bg-[#641E2A] text-[#FBF9F4] hover:bg-[#4E1620]"
+          }`}
+        >
+          <span className="inline-flex items-center gap-2">
+            <Radio
+              className={`h-4 w-4 ${isSharingLocation ? "animate-pulse text-[#C9B99A]" : ""}`}
+            />
+            {isSharingLocation
+              ? "Lokasi Live Dibagikan ke Pelanggan"
+              : `Mulai Antar & Bagikan Lokasi (${primaryStop.orderCode})`}
+          </span>
+          <span className="text-[10px] uppercase tracking-wider opacity-85">
+            {isSharingLocation ? "AKTIF" : "MULAI"}
+          </span>
+        </button>
+      )}
+
+      {broadcastFeedback && (
+        <p className="text-[11px] font-medium text-[#18352B] px-1">
+          {broadcastFeedback}
+        </p>
+      )}
+
+      {/* Map Canvas */}
+      <div className="relative h-68 w-full overflow-hidden rounded-xl border-2 border-[#18352B]/30 bg-[#DDD2BC] shadow-md">
         <div ref={mapContainerRef} className="h-full w-full z-0" />
 
         <div className="pointer-events-none absolute right-3 top-3 z-[400]">
@@ -302,7 +367,7 @@ export function DriverRouteMap({
 
         <div className="pointer-events-none absolute bottom-2.5 left-3 z-[400] flex items-center gap-2 rounded-md bg-[#FBF9F4]/92 px-2.5 py-1 text-[10px] font-semibold text-[#18352B] shadow-xs">
           <span className="inline-flex items-center gap-1">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#18352B]" /> Tidar Atas
+            <span className="h-2.5 w-2.5 rounded-full bg-[#18352B]" /> Kurir
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="h-2.5 w-2.5 rounded-full bg-[#641E2A]" /> Tujuan
@@ -332,7 +397,7 @@ export function DriverRouteMap({
             </button>
           </div>
 
-          <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
             {orderedStops.map((stop, idx) => (
               <div
                 key={stop.id}

@@ -28,24 +28,28 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
-  orderCode: string; // e.g. #ORD-001
-  receiptCode: string; // e.g. KTG-0248
+  orderCode: string;
+  receiptCode: string;
   customerName: string;
   customerPhone: string;
   deliveryAddress: string;
-  deliveryRoute: string; // e.g. Selatan · Kemang
-  scheduledTime: string; // e.g. 11:30
-  scheduledLabel?: string; // e.g. Today, 11:30 WIB
-  serviceType?: string; // e.g. Lunch service · Home delivery
+  deliveryRoute: string;
+  scheduledTime: string;
+  scheduledLabel?: string;
+  serviceType?: string;
   status: OrderStatus;
   items: OrderItem[];
   totalAmount: number;
   allergyAlert?: string;
   allergyInstruction?: string;
-  createdAt: string; // ISO string
+  createdAt: string;
   elapsedMinutes: number;
   dispatchedAt?: string;
   deliveredAt?: string;
+  driverName?: string;
+  driverLat?: number;
+  driverLng?: number;
+  driverLocationUpdatedAt?: string;
 }
 
 export interface CreateOrderPayload {

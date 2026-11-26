@@ -16,3 +16,10 @@ type QrVerifyResponse struct {
 	Status          string `json:"status,omitempty"`
 	Message         string `json:"message,omitempty"`
 }
+
+type UpdateDriverLocationRequest struct {
+	OrderID       string  `json:"orderId"`
+	Lat           float64 `json:"lat"`
+	Lng           float64 `json:"lng"`
+	SetDispatched bool    `json:"setDispatched"`
+}
